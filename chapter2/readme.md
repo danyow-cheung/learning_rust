@@ -153,5 +153,5 @@ fn square_add_loop(c: f64){
 `Option`是rust的枚舉關鍵字
 
 
-
-
+### Parsing Pair Command -Line Arguments
+該程式需要使用幾個命令列參數來控制我們將要編寫的影像以及影像顯示的Mandelbrot集的部分的分辯率。 由於這些命令列參數都遵循一種常見的形式，囙此這裡有一個解析它們的函數：
