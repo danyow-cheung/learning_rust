@@ -155,3 +155,35 @@ fn square_add_loop(c: f64){
 
 ### Parsing Pair Command -Line Arguments
 該程式需要使用幾個命令列參數來控制我們將要編寫的影像以及影像顯示的Mandelbrot集的部分的分辯率。 由於這些命令列參數都遵循一種常見的形式，囙此這裡有一個解析它們的函數：
+
+
+### Mapping from pixels to Complex Numbers 
+以下函數從影像空間轉換為複數空間：
+- `pixel_to_point`
+- `test_pixel_to_point`
+
+這是指元組點數的第一個元素。
+``` rust
+pixel.0 as f64
+```
+這是Rust用於類型轉換的語法：它將pixel.0轉換為f64值。 與C和C++不同，Rust通常拒絕在數位類型之間進行隱含轉換； 你必須寫出你需要的轉換。 這可能很乏味，但明確哪些轉換發生以及何時發生是非常有用的。 隱式整數轉換看起來很無辜，但從歷史上看，它們一直是現實世界C和C++程式碼中錯誤和安全性漏洞的常見來源。
+
+### Plotting the Set
+為了繪製Mandelbrot集，對於影像中的每個點數，我們只需將escape_time應用於複雜平面上的對應點，並根據結果為點數上色：
+- `render`
+  
+
+### Writing Image files 
+影像主機殼提供了讀取和寫入各種圖像格式的功能，以及一些基本的影像操作功能。 特別是，它包括一個PNG影像檔案格式的編碼器，該程式使用它來保存計算的最終結果。 為了使用影像，請在Cargo.toml的[依賴項]部分添加
+```
+image= "0.13.0"
+```
+
+### A concurrent Mandelbrot Program 
+
+### Running  the Manderlbrot Plotter
+
+```
+cargo build --release 
+
+```
