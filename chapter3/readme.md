@@ -194,9 +194,159 @@ i必須是一個`usize`value 不能使用任何其他整數類型作為索引。
 
 ### Building Vectors Element By Element
 
+Building a vector one element at a time isn’t as bad as it might sound. Whenever a vector outgrows its buffer’s capacity, it chooses a new buffer twice as large as the old one. Suppose the vector starts with a buffer that can hold only one element: as it grows to its final capacity, it’ll have buffers of size 1, 2, 4, 8, and so on until it reaches its final size of 2*n*, for some *n*. If you think about how powers of two work, you’ll see that the total size of all the previous, smaller buffers put together is 2*n*–1, very close to the final buffer size. Since the number of actual elements is at least half the buffer size, the vector has always performed less than two copies per element!
 
+What this means is that using Vec::with_capacity instead of Vec::new is a way to gain a constant factor improvement in speed, rather than an algorithmic improve‐ ment. For small vectors, avoiding a few calls to the heap allocator can make an observable difference in performance.
+
+
+
+通过逐个元素地构建向量并使用`Vec::with_capacity`而不是`Vec::new`，可以在速度上获得一个恒定因素的改进，而不是一个算法上的改进。对于小型向量来说，避免了对堆分配器的多次调用可以在性能上产生可观的差异。这是因为`Vec`在增长时会选择一个比旧缓冲区大两倍的新缓冲区，这种增长方式使得向量的总大小接近2^n的最终大小，其中n是增长过程中缓冲区的数量。由于实际元素的数量至少是缓冲区大小的一半，因此向量每个元素的复制操作都不会超过两次。
 
 
 
 ### Slices
+
+一個寫[T]而不指定長度的切片是數組或向量的一個區域。 由於切片可以是任何長度，<u>囙此切片不能直接存儲在變數中或作為函數參數傳遞。 切片總是通過引用傳遞的。</u>
+
+
+
+對切片的引用是一個fat pointer：一個兩個字的值，包括指向切片的第一個元素的指針和切片中元素的數量。
+
+
+
+```rust
+print(&v[0..2]);// print the first two elements of v
+print(&a[2..]);// print elements of a starting with a[2]
+print(&sv[1..3]);
+// print v[1] and v[2]
+```
+
+
+
+## String Types
+
+字串文字的指針類型為const char*。 標準庫還提供了一個類std::string，用於在運行時動態創建字串。
+
+
+
+### String Literals
+
+字串文字用雙引號括起來。 它們使用與字元文字相同的反斜線轉義序列：
+
+```
+let speech = "\"Ouch!\" said the well.\n"
+println!(speech)
+println!("In the room the women come and go,
+        Singing of Mount Abora");
+
+
+```
+
+
+
+不能簡單地在原始字串前面加一個反斜線就將雙引號字元包括在內——記住，我們說過無法識別轉義序列。 然而，這也是有治癒方法的。 原始字串的開始和結束可以用磅符號標記：
+```rust
+println!(r###"
+        This raw string started with 'r###"'.
+        Therefore it does not end until we reach a quote mark ('"')
+        followed immediately by three pound signs ('###'):
+"###);
+```
+
+您可以根據需要添加盡可能少或盡可能多的磅符號，以明確原始字串的結束位置。
+
+
+
+### Byte Strings
+
+帶b首碼的字串文字是位元組字串。這樣的字串是u8值（即位元組）的切片，而不是Unicode文字：
+
+``` 
+let method = b"GET";
+assert_eq!(method, &[b'G', b'E', b'T']);
+
+```
+
+
+
+### Strings in Memory
+
+Rust字串是Unicode字元的序列，但它們不會作為字元數組存儲在記憶體中。 相反，它們是使用UTF-8（一種可變寬度編碼）存儲的。 字串中的每個ASCII字元都存儲在一個位元組中。 其他字元佔用多個位元組。
+
+
+
+字串有一個可調整大小的緩衝區，用於容納UTF-8文字。 緩衝區是在堆上分配的，囙此它可以根據需要或請求調整緩衝區的大小。 在本例中，麵條是一個擁有8位元組緩衝區的字串，其中7個正在使用中。 您可以將String視為Vec<u8>，它保證保存格式良好的UTF-8； 事實上，String就是這樣實現的。
+
+
+
+
+
+A String or &str’s .len() method returns its length. The length is measured in bytes, not characters:
+
+
+
+It is impossible to modify a &str:
+
+```
+let mut s = "hello";
+s[0] = 'c'; // error: the type `str` cannot be mutably indexed s.push('\n'); // error: no method named `push` found for type `&str`
+
+```
+
+
+
+
+
+### String 
+
+`&str `is very much like` &[T]`: a fat pointer to some data. String is analogous to` Vec<T>`: 
+
+
+
+
+
+### Using Strings
+
+Strings support the == and != operators. 
+
+```
+assert!("ONE".to_lowercase()=="one");
+
+```
+
+Strings also support the comparison operators <, <=, >, and >=,
+
+```
+assert!("peanut".contains("nut")); 
+assert_eq!("ಠ_ಠ".replace("ಠ", "■"), "■_■"); assert_eq!(" clean\n".trim(), "clean");
+for word in "veni, vidi, vici".split(", ") { 		assert!(word.starts_with("v"));
+}
+
+
+```
+
+
+
+
+
+### Other String-like Types
+
+Rust保證字串是有效的UTF-8。 有時，程式確實需要能够處理無效的Unicode字串。 這種情況通常發生在Rust程式必須與其他不執行任何此類規則的系統進行互操作時。 例如，在大多數作業系統中，使用檔名創建檔案很容易
+這不是有效的Unicode。 當Rust程式遇到這種檔名時，應該怎麼辦？
+Rust的解決方案是為這些情况提供一些類似字串的類型：
+•對於Unicode文字，請堅持使用字串和&str。
+•使用檔名時，請改用std::path::PathBuf和&path。
+•當使用根本不是字元數據的二進位數據時，請使用Vec<u8>和&[u8]。
+•使用作業系統提供的本機形式的環境變數名和命令列參數時，請使用OsString和&OsStr。
+•當與使用null終止字串的C庫進行互操作時，請使用std::ffi::CString和&CStr。
+
+
+
+
+
+## Beyond the basics
+
+類型是Rust的覈心部分。 我們將在整本書中繼續討論類型並介紹新的類型。 特別是，Rust的用戶定義類型賦予了語言很大的風格，因為這就是定義方法的地方。 有三種用戶定義類型，
+
+
 

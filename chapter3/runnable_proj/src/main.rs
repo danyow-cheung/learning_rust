@@ -1,32 +1,54 @@
 // fn main() {
 //     println!("Hello, world!");
 // }
-
-// =======================arrays.rs=======================
-// fn main(){
-//     let lazy_caterer:[u32;6] = [1,2,3,4,5,11];
-//     let taxonomy = ["Animalia", "Arthropoda", "Insecta"];
-
-//     assert_eq!(lazy_caterer[3],4);
-//     assert_eq!(taxonomy.len(),3);
-//     // 排序
-//     let mut chaos=[3,5,4,1,2]; 
-//     chaos.sort();
-//     assert_eq!(chaos, [1, 2, 3, 4, 6]); 
-//     // assert_eq! 这句是断言，如果正确的话就走下面的代码
-//     // 否则报错
-//         // thread 'main' panicked at src/main.rs:15:5:
-//         // assertion `left == right` failed
-//         // left: [1, 2, 3, 4, 5]
-//         // right: [1, 2, 3, 4, 6]
-//         // note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-
-//     println!("The chaos array is  {:?}",chaos);
+fn main(){
+    let speech = "\"Ouch!\" said the well.\n";
+    println!("{ }",speech);
+    println!("In the room the women come and go,
+        Singing of Mount Abora");
     
-// }
+    let method = b"GET";
+    assert_eq!(method, &[b'G', b'E', b'T']);
+
+    // 創建字符串
+    let error_message = "too many pets ".to_string();
+    //  format()! macro 和println一樣工作！ （），除了它返回一個新的String而不是將文字寫入stdout，並且它不會自動在末尾添加新行。
+    assert_eq!(format!("{}°{:02}′{:02}′′N", 24, 5, 23), "24°05′23′′N".to_string());
+
+    // arrays ,silce  and vectors of strings have two methods,`.concat()`,`.join(step)` that
+    // form a new String from many strings 
+    let bits = vec!["veni","vidi","vici"];
+    assert_eq!(bits.concat(),"venividivici");
+    assert_eq!(bits.join(", "), "veni, vidi, vici");
+    println!("{:?}",bits);
+
+    assert!("ONE".to_lowercase()=="one");
+}
+// =======================arrays.rs=======================
+fn array_main(){
+    let lazy_caterer:[u32;6] = [1,2,3,4,5,11];
+    let taxonomy = ["Animalia", "Arthropoda", "Insecta"];
+
+    assert_eq!(lazy_caterer[3],4);
+    assert_eq!(taxonomy.len(),3);
+    // 排序
+    let mut chaos=[3,5,4,1,2]; 
+    chaos.sort();
+    assert_eq!(chaos, [1, 2, 3, 4, 6]); 
+    // assert_eq! 这句是断言，如果正确的话就走下面的代码
+    // 否则报错
+        // thread 'main' panicked at src/main.rs:15:5:
+        // assertion `left == right` failed
+        // left: [1, 2, 3, 4, 5]
+        // right: [1, 2, 3, 4, 6]
+        // note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+    println!("The chaos array is  {:?}",chaos);
+    
+}
 
 //=======================vectors.rs=======================
-fn main(){
+fn vector_main(){
     let mut v = vec![2,3,5,7];
     assert_eq!(v.iter().fold(1,|a,b| a*b),210);
     
