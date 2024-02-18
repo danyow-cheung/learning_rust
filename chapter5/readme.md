@@ -244,3 +244,165 @@ Rust的全域變數等價物被稱為靜態變數：它是一個在程式啟動�
 
 - 每個靜態都必須初始化。
 - 可變靜態本質上不是執行緒安全的（畢竟，任何線程都可以在任何時候訪問靜態），即使在單執行緒程式中，它們也可能成為其他類型的可重入問題的犧牲品。 由於這些原因，您只能在不安全的塊中訪問可變靜態。 在這個例子中，我們不關心那些特定的問題，所以我們只會拋出一個不安全的塊，繼續前進。
+
+
+
+經過這些修訂，我們現在有以下內容：
+
+```
+static mut STASH : &i32 = &128;
+fn f(p: &i32) { // still not good enough
+unsafe { STASH = p;
+} }
+
+
+```
+
+
+
+我們差不多完成了。 要瞭解剩下的問題，我們需要寫出Rust讓我們省略的一些內容。 這裡所寫的f的簽名實際上是以下內容的簡寫：
+
+```rust
+fn f<'a>(p : &'a i32){...}
+```
+
+
+
+這裡，lifetime‘a（發音為“tick a”）是f的lifetime參數。您可以將＜'a＞讀取為“對於任何lifetime’a”，囙此當我們編寫fn f＜'a>（p:&'a i32）時，我們定義了一個函數，該函數引用了具有任何給定lifetime‘a的i32。
+
+
+
+
+
+在這一點上，很明顯，我們的函數不能只接受任何引用作為論據。 但它應該能够接受具有“靜態生存期”的引用：將這樣的引用存儲在STASH中不能創建懸空指針。 事實上，以下程式碼編譯得很好：
+
+```rust
+static mut STASH:&i32 = &10;
+fn f(p:&'static i32){
+  unsafe{
+    STASH = p ; 
+  }
+}
+```
+
+
+
+這一次，f的簽名闡明了p必須是一個具有lifetime“static”的引用，囙此將其存儲在STASH中不再有任何問題。 我們只能將f應用於對其他靜態的引用，但這是唯一可以肯定的，不會讓STASH以任何管道懸空。 所以我們可以寫：
+
+``` rust
+static WORTH_POINTING_AT: i32 = 1000; f(&WORTH_POINTING_AT);
+```
+
+因为`WORTH_POINTING_AT`是静态的，the type of &WORTH_POINTING_AT is &'static i32, which is safe to pass to f.
+
+
+
+不過，退一步看，當我們修改正確性時，注意到f的簽名發生了什麼：原來的f（p:&i32）最終變成了f（p:&’static i32）。 換句話說，我們無法編寫一個在全域變數中隱藏引用的函數，而不在函數的簽名中反映這一意圖。 在Rust中，函數的簽名總是暴露身體的行為。
+
+
+
+
+
+相反，如果我們確實看到一個函數的簽名像g（p:&i32）（或者寫出了生存時間g<’a>（p:&'a i32）），我們可以看出它不會將參數p隱藏在比調用更持久的任何地方。 沒有必要研究g的定義； 簽名本身告訴我們g對它的論點能做什麼和不能做什麼。 當您試圖建立對函數的調用的安全性時，這個事實最終會非常有用。
+
+
+
+
+
+### Passing References as Arguments
+
+Now that we’ve shown how a function’s signature relates to its body, let’s examine how it relates to the function’s callers. Suppose you have the following code:
+
+> ref.rs
+
+
+
+如果我們試圖將&x傳遞給前面的函數f，該函數將其參數存儲在靜態中，該怎麼辦？
+
+``` 
+fn f(p: &'static i32) { ... } letx=10;
+f(&x);
+
+```
+
+這無法編譯：引用&x的壽命不能超過x，但通過將其傳遞給f，我們將其約束為至少與“static”一樣長。 沒有辦法讓這裡的每個人都滿意，所以Rust拒絕了程式碼。
+
+
+
+### Returning References
+
+函數通常會引用某個資料結構，然後返回對該結構某個部分的引用。 例如，這裡有一個函數，它返回對切片中最小元素的引用：
+
+> smallest.rs
+
+我們以通常的管道從該函數的簽名中省略了生存期。 當函數將單個引用作為參數並返回單個引用時，Rust假設兩者必須具有相同的生存期。 明確地寫出來會給我們：
+
+```
+fn smallest<'a>(v: &'a [i32]) -> &'a i32 { ... }
+```
+
+
+
+
+
+### Structs Containing References
+
+Rust如何處理存儲在資料結構中的引用？ 這是我們之前看到的相同錯誤程式，只是我們將引用放在了一個結構中：
+
+```rust
+struct S { r: &i32
+}
+let s; {
+let x=10;
+s=S{r:&x}; }
+assert_eq!(*s.r, 10); // bad: reads from dropped `x`
+```
+
+
+
+
+
+Whenever a reference type appears inside another type’s definition, you must write out its lifetime. You can write this:
+
+```rust
+struct S { r: &'static i32
+}
+```
+
+
+
+> struct_contain_ref.rs
+
+
+
+現在S類型有一個生存期，就像參考類型一樣。您為類型S創建的每個值都會有一個新的生存期“a”，它會受到您如何使用該值的約束。 你存儲在r中的任何引用的生存期最好包含“a”，“a”必須比你存儲S的任何地方的生存期都長。
+
+
+
+
+
+回到前面的程式碼，運算式S｛r:&x｝創建了一個具有一些生存期“a”的新S值。當您將&x存儲在r欄位中時，您將“a”約束為完全位於x的生存期內。
+
+
+
+
+
+我們不能在這裡省略S的生存期參數：Rust需要知道t的生存期與S中引用的生存期之間的關係，以便對t應用與對S和普通引用相同的檢查。
+我們可以給s靜態壽命。 這項工作：
+
+```rust
+struct T{
+s:S<'static>
+}
+```
+
+
+
+The other approach would be to give T its own lifetime parameter, and pass that to S:
+
+```rust
+struct T<'a>{
+s:S<'a>
+}
+```
+
