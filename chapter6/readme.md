@@ -157,3 +157,235 @@ user.register(&name);
 
 這裡有兩種不同的管道可以初始化局部變數名稱，但無論哪種管道，它都將被初始化一次，所以名稱不需要聲明為mut。
 
+
+
+在初始化變數之前使用變數是錯誤的。 （這與移動值後使用值的錯誤密切相關。Rust真的希望你只在值存在的時候使用它們！）
+
+
+
+
+
+
+
+您可能偶爾會看到似乎重新聲明現有變數的程式碼，如下所示：
+
+````rust
+for lin in  file.lines(){
+	let line  = lin?;
+}
+````
+
+
+
+let聲明創建了一個不同類型的新的第二個變數。 line_result的類型為result＜String，io：：Error＞。 第二個變數，行，是一個字串。賦予第二個和第一個變數相同的名稱是合法的。 在這本書中，我們將堅持在這種情況下使用_result尾碼，以便所有變數都有不同的名稱。
+
+
+
+
+
+塊也可以包含項聲明。 項只是可以全域出現在程式或模塊中的任何聲明，例如fn、結構或use。
+後面的章節將詳細介紹各項內容。 現時，fn就是一個充分的例子。 任何塊都可以包含fn：
+
+```rust
+use std::io;
+use std::cmp::Ordering;
+
+fn show_files()-> io::Result<()>{
+  let mut v = vec![];
+  
+  fn cmp_by_timestamp_then_name(a: &FileInfo,b:&FileInfo)-> Ordering{
+    a.timestamp.cmp(&b.timestamp)// first compare timestamps
+    .reverse() // newest file first 
+    .then(a.path.cmp(&b.path))// compare paths tot break ties
+  }
+  v.sort_by(cmp_by_timestamp_then_name);
+}
+```
+
+
+
+當在塊內部聲明fn時，它的作用域是整個塊——也就是說，它可以在整個封閉塊中使用。 但是嵌套的fn無法訪問恰好在作用域中的局部變數或引數。 例如，函數cmp_by_timestamp_then_name不能直接使用v。 （Rust也有閉包，它可以查看封閉的範圍。請參閱第14章。）
+一個塊甚至可以包含一個完整的模塊。 這可能看起來有點過分——我們真的需要能够把語言的每一部分都嵌套在每一部分中嗎-- 但是程式師（尤其是使用宏的程式師）有一種方法可以找到語言所提供的每一點正交性的用途。
+
+
+
+## if and match
+
+````rust
+if condtion1{
+  bllock1 
+}else if condtion2{
+  block2
+}else {
+  block_n
+}
+````
+
+每一個表達式都必須是布爾類型，與形式一樣，Rust不會隱式地將數位或指針轉換為布林值。
+
+
+
+與C不同，條件周圍不需要括弧。 事實上，如果存在不必要的括弧，rustc將發出警告。 但是，**大括弧是必需的。**
+else-if塊以及最終的else塊都是可選的。 一個沒有else塊的if運算式的行為就像它有一個空的else塊一樣。
+匹配運算式有點像C開關語句，但更靈活。 一個簡單的例子：
+
+```rust
+match code {
+  0=> println!("OK"),
+  1> println!("Wires "),
+ 2=> println!("User Aslepp"),
+  _> println!("Unrecongnized error{}",code)
+}
+```
+
+这个代码是switch關鍵字會做的，取決於code的數值，四個分句代碼實際上都會運行。
+
+其中_ 匹配一切在未知的情況下。囙此它充當預設值：case。
+
+
+
+編譯器可以使用跳轉錶來優化這種匹配，就像C++中的switch語句一樣。 當比賽的每個手臂都產生一個常數值時，也會應用類似的優化。 在這種情況下，編譯器構建這些值的數組，並將匹配項編譯為數組訪問。 除了邊界檢查之外，編譯後的程式碼中根本沒有分支。
+
+
+
+火柴的多功能性源於每只手臂=>左側可以使用的各種支撐圖案。 上面，每個模式都只是一個常數整數。 我們還展示了區分兩種Option值的匹配運算式：
+
+
+
+```rust
+match param.get("name") {
+ Some(name)=> println!("helo,{}",name),
+  None=> println!("Wires ")
+}
+```
+
+匹配運算式的一般形式是：
+
+```rust
+match value {
+  pattern => expr,
+}
+```
+
+
+
+<u>如果運算式是塊，則可以去掉arm後面的逗號。</u>
+Rust從第一個模式開始，依次對照每個模式檢查給定的值。 當模式匹配時，將計算相應的expr，並且匹配運算式是完整的； 沒有進一步的圖案被檢查。 至少有一個模式必須匹配。 Rust禁止不包含所有可能值的匹配運算式：
+
+```rust
+let score = match card.rand{
+  Jack => 10,
+  Queen =>10,
+  Ace=>11
+};// error none xhaustive patterns
+```
+
+all blocks of an if expression must produce values of the s<u>ame type</u> 
+
+````rust
+let s_p = if with_wings {Pet::BUzzard}else{Pet::Hyena} // ok
+
+let f_n = if user.is_hobbit(){"ele"} else {9}; //error 
+
+let best_s = if is_hocke() {"Prea"};//error
+````
+
+
+
+Similarly ,all arms of a match expression must have the same type 
+
+```rust
+let s_p = match favor.element{
+  Fire => Pet::RedPanda,
+  Air=> Pet::Bird,
+  Water=> Pet::Orca,
+  _=>None // error incompatible types
+}
+```
+
+### if let 
+
+there is one more `if ` form, the `if let `form
+
+```rust
+if let pattern = expr{
+block1
+}else{
+block2
+}
+```
+
+給定的expr要麼與模式匹配，在這種情況下block1運行，要麼不匹配，block2運行。 有時，這是從Option或Result中獲取數據的好方法：
+
+```rust
+if let Some(cookie) = request.session_cookie{
+  return restore_session(cookie);
+}
+
+if let Err(err) = present_cheesy_anti_robot_task(){
+  log_robot_attempt(err);
+  politely_accuse_user_of_being_a_robot();
+  
+}else{
+  session.mark_as_human();
+}
+
+```
+
+從不嚴格要求使用if let，因為match可以做if let可以做的所有事情。if let運算式是只有一種模式的匹配的簡寫：
+
+```rust
+match expre{
+  pattern => {block1}
+  _=> {block2}
+}
+```
+
+
+
+## Loops
+
+四種循環的表達方式
+
+```rust
+while condition{
+block
+}
+
+while let pattern = expr{
+  block
+}
+
+loop{
+  block
+}
+
+for pattern in collection{
+  block
+}
+```
+
+
+
+在rust中，循環是表達式，不會產生特定數值
+
+
+
+**while let**迴圈類似於if let。 在每次迴圈反覆運算開始時，expr的值要麼與給定的模式匹配（在這種情況下塊運行），要麼不匹配（在那種情况下迴圈退出）。
+
+
+
+for in c and rust 
+
+```c
+for (int i =0;i<20;i++){
+	printf("%d\n",i);
+}
+```
+
+```rust
+for i in 0..20{
+  println!("{}",i)
+}
+```
+
