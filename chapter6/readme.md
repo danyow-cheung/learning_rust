@@ -389,3 +389,237 @@ for i in 0..20{
 }
 ```
 
+
+
+為了與Rust的移動語義保持一致，值上的for迴圈會消耗該值：
+
+```rust
+let string: Vec<String> = error_messages();
+for s in strings{			// each string is moved into s here
+  println!("{}",s);
+}// and dropped here 
+println!("{}errors",strings.len());
+```
+
+這可能很不方便。 簡單的補救方法是迴圈引用集合。 那麼，迴圈變數將是對集合中每個項的引用：
+
+```rust
+for rs in &strings{
+	println!("String {:?} is a address {:p}.",*rs,rs);
+}
+```
+
+
+
+這裡&strings的類型是&Vec＜String＞，rs的類型是&String。在mut引用上反覆運算為每個元素提供一個mut引用：
+
+```rust
+for rs in &mut strings{  // the type of rs is &mut string
+rs.push("\n"); 	// add a newline to each string
+}
+```
+
+
+
+break運算式退出封閉迴圈。 （在Rust中，break只在迴圈中起作用。在匹配運算式中不需要break，這與switch語句在這方面不同。）
+
+`continue`關鍵字跳到下一個循環
+
+```rust
+for line in input_lines{
+  let trimmed = trim_comments_and_whitespace(line);
+  if trimmed.is_empty(){
+    continue;
+  }
+  ...
+}
+```
+
+
+
+在for迴圈中，continue前進到集合中的下一個值。 如果沒有更多的值，則迴圈退出。 類似地，在while迴圈中，continue重新檢查迴圈條件。 如果現在為false，則迴圈退出。
+迴圈可以標記為具有生存期。 在以下示例中，'search:是外部for迴圈的標籤。 囙此，break‘search退出了那個迴圈，而不是內部迴圈。
+
+```rust
+'search
+for room in apartment{
+	for spot in room.hiding_spots(){
+    if spot.contains(keys){
+      println!("Your keys are {} in the {}",spot,room);
+      break 'search;
+    }
+  }
+}
+```
+
+標籤也可以與continue一起使用。
+
+
+
+
+
+## return expressions
+
+返回運算式退出當前函數，並向調用方返回一個值。 
+
+不帶值的return是return（）的簡寫：
+
+```rust
+fn f(){ // return type omitted :defaults to ()
+return ;  // return value omitted : defaults to()
+}
+```
+
+就像中斷的表達一樣，返回可以放弃正在進行的工作。
+
+
+
+```rust
+// 下面的代碼意思一樣
+let output = File::create(filename)?;
+
+let output = match File::create(filename){
+  Ok(f)=>f,
+  Err(err)=> return Err(err)
+}
+```
+
+我們放弃所有這些並退出封閉函數，返回從File::create（）得到的任何錯誤。
+
+
+
+## Why Rust has loop
+
+Rust編譯器的幾個部分分析程式中的控制流。
+
+- Rust檢查通過函數的每條路徑是否返回預期返回類型的值。 要正確地執行此操作，它需要知道是否有可能到達函數的末尾。
+
+- Rust檢查本地變數是否從未在未初始化的情况下使用。 這需要檢查通過函數的每條路徑，以確保在沒有經過初始化變數的程式碼的情况下，無法到達使用變數的位置。
+
+- Rust警告無法訪問的程式碼。 如果沒有通過函數的路徑到達程式碼，則程式碼是不可訪問的。
+
+這些被稱為**流量敏感分析**。 它們並不是什麼新鮮事； 多年來，Java一直在進行類似於Rust的“定義分配”分析。
+
+
+
+當執行這種規則時，語言必須在簡單性和聰明性之間取得平衡，簡單性使程式師更容易弄清楚編譯器有時在說什麼，聰明性有助於消除錯誤警告和編譯器拒絕完全安全的程式的情况。 Rust追求簡單。 它的流敏感分析根本不檢查迴圈條件，而是簡單地假設程式中的任何條件都可以是真或假。
+這導致Rust拒絕某些安全程式：
+
+```rust
+fn wait_for_process(process:&mut Process)->i32{
+  while true{
+    if process.wait(){
+      return process.exit_code();
+    }
+  }
+}// error:not all control paths return a value
+```
+
+這裡的錯誤是假的。 實際上不可能到達函數的末尾
+而不返回值。
+迴圈運算式是作為這個問題的“說出你的意思”解決方案提供的。
+
+
+
+Rust的類型系統也受到控制流的影響。 前面我們說過if運算式的所有分支都必須具有相同的類型。 但是，在以break或return運算式、無限迴圈或調用panic結束的塊上強制執行此規則是愚蠢的！ （）或std::process:exit（）。 所有這些表達的共同點是，它們永遠不會以通常的管道結束，從而產生價值。 中斷或返回突然退出當前塊； 無限迴圈永遠不會結束； 等等
+
+
+
+所以在Rust中，這些運算式沒有正常類型。 **不正常完成的運算式被指定了特殊類型！**， 而且它們不受關於類型必須匹配的規則的約束。 你可以看到！ 在std::process::exit（）的函數簽名中：
+
+```rust
+fn exit(code: i32)-> !
+```
+
+`!`關鍵字意味著exit永不返回，這是一個發散函數。
+
+
+
+您可以使用相同的語法編寫不同的函數，在某些情况下這是非常自然的：
+
+```rust
+fn serve_forever(socket:ServerSocket,handler:ServerHandler)->!{
+	socket.listen();
+  loop{
+    let s = socket.accept();
+    handler.handle(s);
+  }
+}
+```
+
+
+
+當然，如果函數能够正常返回，Rust就會認為這是一個錯誤。
+
+## Function and Method calls
+
+The syntax for calling functions and methods is the same in Rust as in many other languages:
+
+```rust
+let x = gcd(1302,462); 	// function call
+let room = player.location(); // method call
+```
+
+In the second example here, player is a variable of the made-up type Player, which has a made-up .location() method.
+
+
+
+rust通常在引用和被引用的值之間做明顯的區別。
+
+**If you pass a &i32 to a function that expects an i32, that’s a type error.**
+
+注意到`. operator` 的限制沒有那麼嚴格。
+
+
+
+在方法callplayer.location（）中，player可能是player、&player類型<u>的引用或</u>Box＜player＞或Rc＜player＞類型的<u>智慧指針</u>。 .location（）方法可能通過值或引用獲取玩家。 相同的.location（）語法在所有情况下都有效，因為Rust的。 `. operator`會根據需要自動取消引用播放機或借用對它的引用。
+
+
+
+第三種語法用於調用靜態方法，如Vec::new（）。
+
+```rust
+let mut numberes = Vec::new();
+```
+
+
+
+靜態方法和非靜態方法之間的區別與面向對像語言中的相同：<u>非靜態方法對值調用（</u>如my_vec.len（）），靜態方<u>法對類型調用</u>（如vec::new（））。
+
+當然，方法調用可以被連結：
+
+```rust
+Iron::new(router).http("localhost:3000").unwrap();
+```
+
+
+
+Rust語法的一個怪癖是，在函數調用或方法調用中，泛型類型的常用語法Vec<T>不起作用：
+
+```rust
+return Vec<i32>::with_capacity(1000); // error 
+let ramp = (0..n).collect(Vec<i32>)();// error 
+```
+
+
+
+問題是，在運算式中，<是小於運算子。 Rust編譯器建議在這種情況下編寫`：：＜T＞`而不是`＜T＞`，這就解决了問題：
+
+```rust
+return Vec::<i32>::with_capacity(1000); // error 
+let ramp = (0..n).collect::Vec<i32>();// error 
+```
+
+符號`：：＜…＞` 在Rust社區被親切地稱為渦輪魚。 或者，通常可以删除類型參數並讓Rust推斷它們：
+
+```rust
+return Vec::with_capacity(10);
+let rmap :Vec<i32> = (0..n).collect()
+```
+
+
+
+
+
+
+
