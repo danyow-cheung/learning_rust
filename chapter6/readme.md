@@ -619,7 +619,230 @@ let rmap :Vec<i32> = (0..n).collect()
 
 
 
+## Field and Elements
 
+使用熟悉的語法訪問結構的欄位。 元組是相同的，只是它們的欄位有數位而不是名稱：
+
+```rust
+game.black_pawns // struct field
+coords.1 		// tuple element
+```
+
+
+
+如果點左側的值是引用或智慧指針類型，則會自動取消引用，就像方法調用一樣。
+
+方括號訪問數組、切片或向量的元素：
+
+`places[i] // array element`
+
+方括號左側的值將<u>自動取消引用。</u>
+
+
+
+像這三個運算式被稱為`lvalues`，因為它們可以出現在賦值的左側：
+
+```rust
+game.black_pawns = 0x00ff0000_00000000_u64; coords.1 = 0;
+pieces[2] = Some(Piece::new(Black, Knight, coords));
+```
+
+當然，只有當game、coords和pieces被聲明為mut變數時，才允許這樣做。
+
+
+
+
+
+當然，只有當game、coords和pieces被聲明為mut變數時，才允許這樣做。
+從數組或向量中選取切片非常簡單：
+
+```
+let second_half=&game_moves[midpoint..end];
+```
+
+
+
+這裡game_moves可以是數組、切片或向量； 不管怎樣，結果都是一個長度為端點-中點的借用切片。 game_moves被認為是在second_half的生命週期中借用的。
+這個 `..operator`允許省略任一操作數； 根據存在的操作數，它最多可生成四種不同類型的對象：
+
+```rust
+.. //Rangerfull
+a .. // RangerForm (start:a)
+..b // Rangeto(end:b)
+a ..b // Range(start:A ,end:B)
+```
+
+
+
+Rust範圍是半開放的：它們包括起始值（如果有的話），但不包括結束值。 範圍0。。 4包括數位0、1、2和3。
+只有包含起始值的範圍才是可反覆運算的，因為迴圈必須有起始位置。 但是在數組切片中，所有四種形式都是有用的。 如果省略了範圍的開始或結束，則默認為要切片的數據的開始或終止。
+囙此，經典的分治排序算灋quicksort的實現在一定程度上可能看起來是這樣的：
+
+```rust
+fn quicksort<T:Ord>(slice :&mut [T]){
+  if slice.len()<=1{
+    return ; 	// nothing to sort
+  }
+  // Parition the slice into two parts,front and back
+  let pivot_index = partitions(slice);
+  
+  //Recursively sort the front half of 'slice'
+  quicksort(&mut slice[..pivot_index]);
+  // and the back half
+  quicksort(&mut slice[pivot_index+1..]);
+}
+```
+
+
+
+## Reference Operators
+
+第5章介紹了運算子&和&mut的地址。
+
+
+
+一元*運算子用於訪問引用所指向的值。 正如我們所看到的，當您使用時，Rust會自動跟隨引用。 運算子來訪問欄位或方法，囙此只有當我們想讀取或寫入引用所指向的整個值時，*運算子才是必要的。
+例如，有時反覆運算器會生成引用，但程式需要底層值：
+
+```rust
+let padovan : Vec<u64> = compute_padovan_sequence(n);
+for ele in &padovan{
+	draw_triangle(turtle,*elem);
+}// the type of elem is &u64,所以*elem is u64
+```
+
+
+
+## Arithmetic, Bitwise, Comparison, and Logical Operators
+
+>  算術運算子、逐比特運算子、比較運算子和邏輯運算子
+
+
+
+Rust的二進位運算子與許多其他語言中的二進位運算子類似。 為了節省時間，我們假設熟悉其中一種語言，並將重點放在Rust偏離傳統的幾點上。
+
+Rust有常用的算術運算子+、-、*、/和%。
+
+
+
+標準庫為未檢查的算術提供了a.wrappeng_add（b）等方法。
+
+
+
+即使在發佈版本中，整數除以零也會引發恐慌。 整數有一個方法a.checked_div（b），它返回一個Option（如果b為零，則為None）並且從不恐慌。
+一元-否定一個數位`Unary -negates a number`。 除無符號整數外，所有數位類型都支持它。 不存在一元+運算子`unary + operator`。
+
+
+
+```rust
+println!("{}", -100); // -100
+println!("{}", -100u32); // error: can't apply unary `-` to type `u32` 
+println!("{}", +100); // error: expected expression, found `+`
+```
+
+
+
+rust繼承在c中的`%`,運算符和位運算符號`&,|,^,<<,>>`。有不同的是，rust中使用`!`取代了`~`
+
+
+
+這意味著！ n不能用在整數n上表示“n為零”。為此，寫n==0。
+
+
+
+比特移位總是在有符號整數類型上進行符號擴展，在無符號整數類型中進行零擴展。 由於Rust具有無符號整數，囙此它不需要Java的>>運算子。
+與C不同，逐位運算的優先順序高於比較，囙此如果您編寫x&BIT！= 0，這意味著（x&BIT）！= 0，正如您可能想要的那樣。 這比C的解釋x&（BIT！=0）有用得多，後者測試錯誤的比特！
+Rust的比較運算子是==，！=，<，<=，>， 和 要比較的兩個值必須具有相同的類型。
+Rust還有兩個短路邏輯運算子&&和||。 兩個操作數的類型都必須完全為bool。
+
+
+
+
+
+## Assignment
+
+=運算符可用於為多個變數及其欄位或元素賦值。 但是賦值在Rust中不像在其他語言中那樣常見，<u>因為默認情况下變數是不可變的。</u>
+如第4章所述，賦值移動不可壓縮類型的值，而不是隱式複製它們。
+支持複合賦值：
+
+```rust
+total += item.price;
+```
+
+這相當於`total=total+item.price`；。 支持其他操作員
+也是：–=、*=等等。 
+
+與C不同，Rust不支持鏈式賦值：你不能寫a=b=3來將值3同時賦給a和b。賦值在Rust中非常罕見，你不會錯過這個簡寫。
+<u>Rust沒有C的遞增和遞減運算子++和--。</u>
+
+
+
+## Type Casts
+
+將值從一種類型轉換為另一種類型通常需要在Rust中進行顯式強制轉換。 Casts**使用as關鍵字**：
+
+```rust
+let x = 17; // x = i32
+let index = x as usize; // x= usize
+```
+
+允許使用casts的情況：
+
+- 數位可以從任何內寘的數位類型轉換為任何其他類型。
+
+  然而，在撰寫本文時，將大的浮點值強制轉換為太小而無法表示的整數類型可能會導致未定義的行為。 即使在安全的Rust中，這也可能導致崩潰。 這是編譯器中的一個錯誤
+
+- bool、char類型或類C枚舉類型的值可以強制轉換為任何整數類型。
+
+我們說過轉換通常需要cast。 一些涉及參考類型的轉換非常簡單，即使沒有強制轉換，語言也會執行這些轉換。 一個簡單的例子是將mut引用轉換為非mut引用。
+
+
+
+不過，可能會發生幾個更重要的自動轉換：
+
+- `&String`類型自動轉換為`&str`
+- `&Vec<i32>`自動轉換`&i[32]`
+- `&Box<chessboarf>` 自動轉換`&checkboard`
+
+
+
+這些被稱為deref強制，因為它們適用於實現deref內寘特性的類型。 <u>Deref強制的目的是使智慧指針類型（如Box）的行為盡可能類似於底層值</u>。 
+用戶定義的類型也可以實現Deref特性。 
+
+
+
+## Closures
+
+Rust具有閉包、羽量級函數類值。 閉包通常由一個參數列表組成，在分隔號之間給出，後面跟著一個運算式：
+
+```rust
+let is_even = |x|x%2==0;
+```
+
+Rust推斷參數類型和返回類型。 你也可以像對待函數一樣，明確地寫出它們。 如果您確實指定了返回類型，那麼為了語法的健全性，**閉包的主體必須是塊**：
+
+```rust
+//example
+let is_even = |x:u64|-> bool{x%2==0};
+```
+
+
+
+調用閉包使用與調用函數相同的語法：
+
+```
+assert_eq!(is_even(14),true)
+```
+
+
+
+## Precedence And Associativity
+
+優先順序和關聯性
+
+
+
+（與大多數程式設計語言一樣，當一個運算式包含多個相鄰運算子時，Rust具有運算子優先順序來確定運算順序。例如，在limit＜2*broom.size+1中，.運算子具有最高優先順序，囙此欄位訪問首先發生。）
 
 
 
