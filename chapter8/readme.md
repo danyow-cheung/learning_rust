@@ -599,6 +599,135 @@ cargo test
 
 
 
+測試通常使用斷言！ 和assert_eq！ Rust標準庫中的宏。 明確肯定 如果expr為true，則（expr）成功。 否則，它會驚慌失措，從而導致測試失敗。 assert_eq！ （v1，v2）就像assert！ （v1＝＝v2），但如果斷言失敗，則錯誤消息顯示這兩個值。
+
+
+
+您可以在普通程式碼中使用這些宏來檢查不變數，但請注意assert！ 和assert_eq！ 甚至包含在發佈版本中。 使用debug_assert！ 和debug_assert_eq！ 而是編寫僅在調試構建中檢查的斷言。
+要測試錯誤案例，請將#[should_panic]内容添加到測試中：
+
+```rust
+//this test passes only if division by zero causes a panic 
+//as we claimed in the previous chapter
+#[test]
+#[should_panic(expected="divide by zero")]
+fn test_divide_by_zero_error(){
+  1/0;//should panic
+}
+```
+
+標記為#[test]的函數是有條件編譯的。 當您運行貨物測試時，cargo會在啟用測試和測試工具的情况下構建程式的副本。 普通貨物構建或貨物構建-發佈跳過測試程式碼。 這意味著您的單元測試可以與它們測試的程式碼一起使用，如果需要，可以訪問內部實現的詳細資訊，但不需要運行時成本。 然而，這可能會導致一些警告。 例如
+
+
+
+囙此，當您的測試內容豐富到需要支持程式碼時，慣例是將它們放在一個測試模塊中，並僅使用#[cfg]内容聲明整個模塊進行測試：
+
+```rust
+#[cfg(test)]
+mod tests{
+  fn rougly_equal(a:f64,b:f64)-> bool{
+    (a-b).abs()<1e-6
+  }
+  #[test]
+  fn trig_works(){
+    use std::f64::consts::PI;
+    assert!(rougly_equal(PI.sin(),0.0));
+  }
+}
+```
+
+
+
+Rust的測試工具使用多個線程一次運行多個測試，默認情况下，Rust程式碼的一個很好的方面是執行緒安全的。 （要禁用此功能，請運行單個測試，貨物測試testname；或者將環境變數RUST_test_THREADS設定為1。）
+
+### Integration Tests
+
+你的`fern simulator`器繼續生長。 您已决定將所有主要功能放入一個可供多個可執行文件使用的庫中。 如果能像最終用戶那樣使用fern_sim.rlib作為外部主機殼，讓一些測試與庫連結，那就太好了。 此外，有些測試是從二進位檔案加載保存的類比開始的，在src目錄中有這些大的測試檔案會很尷尬。 集成測試有助於解决這兩個問題。
+
+
+
+
+
+集成測試是`.rs file`，位於項目src目錄旁邊的測試目錄中。 當您運行貨物測試時，cargo將每個集成測試編譯為一個單獨的、獨立的板條箱，與您的庫和Rust測試工具連結。 以下是一個示例：
+
+> tests/unfurl.rs
+
+請注意，集成測試包括一個extern crate聲明，因為它使用fern_sim作為庫。 集成測試的要點是，他們從外部看到您的主機殼，就像用戶一樣。 他們測試板條箱的公共API。
+貨物測試運行單元測試和集成測試。 要僅在特定檔案中運行集成測試，例如`tests/unfold.rs--use`命令`cargo test--test unroll`。
+
+
+
+### Documentation
+
+命令cargo doc為您的庫創建HTML檔案：
+
+```
+cargo doc --no-deps --open
+```
+
+--no-deps選項告訴Cargo只為fern_sim本身生成檔案，而不是為它所依賴的所有板條箱生成檔案。
+--open選項告訴Cargo以後在瀏覽器中打開檔案。
+
+
+
+檔案是根據庫的pub功能生成的，再加上您附加到它們上的任何檔案注釋。 我們已經在本章中看到了一些檔案評論。 它們看起來像是評論：
+
+```rust
+pub fn produce_spore(factory:&mut Sporangium)->Spore{
+  ...
+}
+```
+
+但是，當Rust看到以三個斜杠開頭的注釋時，它會將其視為#[doc]内容。 Rust對待前面的例子與此完全相同：
+
+```rust
+#[doc="Simulate the production of a spore by meiosis"]
+pub fn produce_spore(factory:&mut Sporangium)->Spore{
+  ...
+}
+```
+
+
+
+編譯或測試庫時，將忽略這些内容。 當您生成檔案時，檔案對公共特性的注釋會包含在輸出中。
+同樣，注釋以//開頭！ 被視為#！ [doc]内容，並附加到封裝特性，通常是模塊或主機殼。 例如，fern_sim/src/lib.rs檔案的開頭可能如下：
+
+`//!simulate the growth of ferns from the level of `
+
+`//!individual cells on up`
+
+檔案注釋的內容被視為Markdown，這是一種簡單HTML格式的簡寫符號。 星號用於*italics*和**bold類型**，空行被視為段落分隔符號，等等。但是，您也可以使用HTML； 檔案注釋中的任何HTML標記都會逐字逐句地複製到檔案中。
+
+
+
+You can use `backticks` to set off bits of code in the middle of running text. In the output, these snippets will be formatted in a fixed-width font. Larger code samples can be added by indenting four spaces.
+
+```rust
+    /// A block of code in a doc comment:
+    ///
+    ///     if everything().works() {
+    ///					println!("ok");
+    ///		}
+```
+
+You can also use Markdown fenced code blocks. This has exactly the same effect.
+
+```
+    /// Another snippet, the same code, but written differently:
+    ///
+    /// ```
+    /// if everything().works() {
+    ///     println!("ok");
+    /// }
+    /// 
+```
+
+Whichever format you use, an interesting thing happens when you include a block of code in a doc comment. Rust automatically turns it into a test.
+
+
+
+### Doc-Tests
+
 
 
 ## Specifying Dependencies
