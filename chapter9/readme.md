@@ -96,19 +96,95 @@ Vec。 這些標準類型是結構，但它們的所有欄位都是私有的。 
 
 ## tuple-like structs
 
+第二種結構類型被稱為類元組結構，因為它類似於元組：
 
+```rust
+struct Bounds(usize,usize)
+```
+
+構造這種類型的值就像構造元組一樣，只是必須包含結構名稱：
+
+```rust
+let image_bounds = Bounds(1024,768);
+```
+
+在元組結構中的數值可以叫做元素element，就像元組一樣
+
+```rust
+assert_eq!(image_bounds.0*image_bounds.1,786432);
+```
+
+類元組結構的單個元素可能是公共的，也可能不是：
+
+```rust
+pub struct Bounds(pub usize,pub usize);
+```
+
+運算式Bounds（1024768）看起來像一個函數調用，事實上它是：定義類型也隱式定義了一個函數：
+
+```rust
+fn Bounds(elem0:usize,elem1:usize)->Bounds{...}
+```
+
+在最基本的層次上，命名欄位和類元組結構非常相似。 選擇使用哪一個可以歸結為易讀性、歧義性和簡潔性的問題。 如果您將使用。 運算子來獲取值的組成部分，按名稱識別欄位可以為讀者提供更多資訊，而且可能更能防止拼寫錯誤。 如果您通常使用模式匹配來查找元素，那麼類似元組的結構可以很好地工作。
+
+
+
+簇狀結構適用於新類型，即具有單個組件的結構，您可以定義該組件以進行更嚴格的類型檢查。 例如，如果您使用的是僅ASCII文字，則可以定義一個新類型，如下所示：
+
+```rust
+struct Ascii(Vec<u8>);
+```
+
+對ASCII字串使用這種類型比簡單地傳遞`Vec<u8>`緩衝區並在注釋中解釋它們要好得多。 newtype有助於Rust捕捉其他位元組緩衝區傳遞給期望ASCII文字的函數的錯誤。 我們將在第21章中給出一個使用newtype進行有效類型轉換的例子。
 
 ## Unit-Like Structs
+
+第三種結構有點晦澀：它聲明了一個根本沒有元素的結構類型：
+
+```rust
+struct Onesuch;
+```
+
+這種類型的值不佔用記憶體，很像`type()`。 Rust實際上並不需要將類似單元的結構值存儲在記憶體中，也不需要生成程式碼來操作它們，因為它可以僅從值的類型中告訴它可能需要瞭解的關於值的一切。 但從邏輯上講，空結構是一種與其他類型一樣具有值的類型，或者更準確地說，是一種只有一個值的類型：
+` let o=Onesuch;`
+
+Unit-like structs can also be useful when working with traits, which we’ll describe in chapter11 
+
+
 
 
 
 ## Struct Layout
 
+在記憶體中，命名欄位和類元組結構都是相同的：可能是混合類型的值的集合，在記憶體中以特定的管道排列。 例如，在本章的前面，我們定義了這個結構：
 
+
+
+```rust
+struct GrayscaleMap{
+  pixels:Vec<u8>,
+  size:(usize,usize)
+}
+```
+
+A GrayscaleMap value is laid out in memory as diagrammed in Figure 9-1.
+
+<img src= "struct_layout.png">
+
+
+
+與C和C++不同，Rust沒有具體承諾如何在記憶體中對結構的欄位或元素進行排序； 這張圖只顯示了一種可能的排列方式。 然而，Rust確實承諾將欄位的值直接存儲在結構的區塊中。 JavaScript、Python和Java會將點數和大小值分別放在各自的堆分配塊中，並讓GrayscaleMap的欄位指向它們，而Rust則將點數和尺寸直接嵌入GrayscaleMap值中。 只有點數向量所擁有的堆分配緩衝區保留在其自己的塊中。
+您可以要求Rust使用#[repr（C）]内容以與C和C++相容的管道佈局結構。 我們將在第21章中對此進行詳細介紹。
 
 
 
 ## Definin Methods with impl
+
+在整本書中，我們一直在對各種值調用方法。 我們已經用`v.push（e）`將元素推送到向量上，用`v.len（）`獲取它們的長度，用`r.expect（“msg”）`檢查Result值中的錯誤，等等。
+您可以在定義的任何結構類型上定義方法。 Rust方法不是像C++或Java那樣出現在結構定義中，而是出現在一個單獨的impl塊中。 例如
+
+> impl.rs
 
 
 
