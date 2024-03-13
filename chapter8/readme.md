@@ -728,9 +728,255 @@ Whichever format you use, an interesting thing happens when you include a block 
 
 ### Doc-Tests
 
+當您在Rust庫主機殼中運行測試時，Rust會檢查檔案中出現的所有程式碼是否都能正常運行。 它通過獲取檔案注釋中出現的每個程式碼塊，將其編譯為一個單獨的可執行主機殼，將其與庫連結並運行來實現這一點。
+
+
+
+這裡是一個檔案測試的獨立示例。 通過運行`cargo new range`創建一個新項目，並將此程式碼放在ranges/src/lib.rs中：
+
+
+
+使用`cargo doc`就可以看到文件
+
+再`cargo test`就可以拿到測試結果
+
+```
+dyMBP:ranges danyow$ cargo test
+   Compiling ranges v0.1.0 (/Users/danyow/Desktop/self-learning/code/chapter8/ranges)
+    Finished test [unoptimized + debuginfo] target(s) in 0.70s
+     Running unittests src/lib.rs (target/debug/deps/ranges-ec0128393d3d8a72)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/ranges-c38fa540cf0104cd)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ranges
+
+running 1 test
+test src/lib.rs - overlap (line 5) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.65s
+```
+
+如果您將`--verbose`標誌傳遞給Cargo，您將看到它正在使用`rustdoc--test`來運行這兩個測試。 Rustdoc將每個程式碼樣本存儲在一個單獨的檔案中，添加幾行模範程式碼，以生成兩個程式。 以下是第一個：
+
+
+
+
+
+如果程式碼甚至不需要編譯，請使用ignore而不是no_run。 如果程式碼塊根本不是Rust程式碼，請使用語言名稱，如c++或sh，或者使用text表示純文字。 rustdoc不知道數百種程式設計語言的名稱； 相反，它將不識別的任何注釋視為表明程式碼塊不是Rust。 這將禁用程式碼高亮顯示和檔案測試。
+
 
 
 ## Specifying Dependencies
 
+We’ve seen one way of telling Cargo where to get source code for crates your project depends on: by version number.
+
+```
+    image = "0.6.1"
+```
+
+有幾種方法可以指定依賴關係，對於使用哪個版本，你可能想說一些相當微妙的事情，所以花幾頁時間在這方面是值得的。
+
+
+
+首先，您可能想要使用根本沒有在crates.io上發佈的依賴項。 一種方法是指定Git存儲庫URL和修訂版：
+
+```
+ image = { git = "https://github.com/Piston/image.git", rev = "528f19c" }
+```
+
+這個特定的板條箱是開源的，託管在GitHub上，但你也可以很容易地指向託管在公司網絡上的私人Git存儲庫。如圖所示，你可以指定要使用的特定rev、標記或分支。 （這些都是告訴Git要檢查原始程式碼的哪個版本的方法。）
+
+
+
+另一種選擇是指定一個包含主機殼原始程式碼的目錄：
+
+```
+    image = { path = "vendor/image" }
+```
+
+當您的團隊有一個單獨的版本控制存儲庫，其中包含幾個板條箱或整個依賴關係圖的原始程式碼時，這很方便。 每個主機殼都可以使用相對路徑指定其依賴項。
+
+
+
+
+
+對依賴項進行這種級別的控制是非常强大的。 如果你决定你使用的任何開源板條箱都不完全符合你的喜好，你可以簡單地分叉：只需點擊GitHub上的分叉按鈕，然後更改你的Cargo.toml檔案中的一行。 你的下一個貨物構建將無縫地使用你的叉箱，而不是官方版本。
+
+
+
+### Versions
+
+當您在Cargo.toml檔案中寫入類似image=“0.6.1”的內容時，Cargo對此的解釋相當鬆散。 它使用了最新版本的映射，該映射被認為與版本0.6.1相容。
+
+
+
+相容性規則改編自語義版本控制。
+•以0.0開頭的版本號是如此原始，以至於Cargo從不認為它是
+與任何其他版本相容。
+•以0.x開頭的版本號（其中x為非零）被認為與0.x系列中的其他點發行版本相容。 我們指定了影像版本0.6.1，但如果可用，Cargo將使用0.6.3。 （這不是語義版本控制標準所說的關於0.x版本號的內容，但事實證明，該規則太有用了，不容忽視。）
+•一旦項目達到1.0，只有新的主要版本會破壞相容性。 囙此，如果您要求2.0.1版本，Cargo可能會使用2.17.99，但不會使用3.0。
+
+
+
+默認情况下，版本號是靈活的，因為否則使用哪個版本的問題會很快變得過於緊張。 假設一個庫libA使用了num=“0.1.31”，而另一個庫libB使用了num=“0.1.29”。 如果版本號需要完全匹配，則沒有任何項目能够同時使用這兩個庫。 允許Cargo使用任何相容版本是一個更實用的默認設置。
+儘管如此，不同的項目在依賴性和遷移方面有不同的需求。 您可以使用運算子指定確切的版本或版本範圍：
+
+
+
+
+
+您偶爾會看到的另一個版本規範是萬用字元*。 這條消息告訴Cargo，任何版本都可以。除非其他Cargo.toml檔案包含更具體的限制，否則Cargo將使用最新的可用版本。 doc.crates.io上的貨物檔案更詳細地涵蓋了版本規範。
+
+
+
+請注意，相容性規則意味著不能純粹出於行銷原因選擇版本號。 它們實際上是有意義的。 它們是板條箱維護者和用戶之間的契约。 如果您維護的主機殼版本為1.7，並且您决定删除某個功能或進行任何其他不完全向後相容的更改，則必須將版本號提高到2.0。 如果你把它稱為1.8，你會
+聲稱新版本與1.7相容，您的用戶可能會發現自己的構建已損壞。
+
+
+
+### Cargo.lock
+
+Cargo.toml中的版本號非常靈活，但我們不希望Cargo每次構建時都將我們陞級到最新的庫版本。 想像一下，在緊張的調試過程中，突然貨物構建將您陞級到新版本的庫。 這可能會造成難以置信的破壞。 調試過程中發生的任何更改都是不好的。 事實上，當涉及到庫時，從來沒有進行意外更改的好時機。
+
+
+
+囙此，貨物有一個內寘的機制來防止這種情況發生。 第一次構建項目時，Cargo會輸出一個Cargo.lock檔案，記錄它使用的每個板條箱的確切版本。 以後的版本將查閱此檔案並繼續使用相同的版本。 只有當您告訴Cargo時，Cargo才會陞級到新版本，可以手動在Cargo.toml檔案中新增版本號，也可以運行Cargo更新：
+
+```
+cargo update
+```
+
+貨物更新僅陞級到與您在`cargo.toml`中指定的內容相容的最新版本。 如果您指定了image=“0.6.1”，並且希望陞級到0.10.0版本，則必須在Cargo.toml中進行更改。 下次構建時，Cargo將更新到圖像庫的新版本，並將新版本號存儲在Cargo.lock中。
+前面的例子顯示Cargo正在更新crates.io上託管的兩個crate。存儲在Git中的依賴項也會發生類似的情况。 假設我們的Cargo.toml檔案包含以下內容：
+
+```
+image = { git = "https://github.com/Piston/image.git", branch = "master" }
+
+```
+
+如果cargo build看到我們有一個cargo.lock檔案，它將不會從Git存儲庫中選取新的更改。 相反，它讀取的是Cargo.lock，並使用與上次相同的修訂版。 但貨物更新將從master中選取，以便我們的下一個版本使用最新修訂版。
+Cargo.lock是自動為您生成的，您通常不會手動編輯它。 儘管如此，如果您的項目是可執行的，您應該將Cargo.lock提交給版本控制。 這樣，構建您的項目的每個人都將始終獲得相同的版本。 您的Cargo.lock檔案的歷史記錄將記錄您的依賴關係更新。
+
+
+
+如果你的項目是一個普通的Rust庫，那麼不用麻煩提交Cargo.lock。 庫的下游用戶將擁有Cargo.lock檔案，其中包含其整個依賴關係圖的版本資訊； 它們將忽略庫的Cargo.lock檔案。 在極少數情况下，您的項目是共亯庫（即輸出是.dll、.dlib或.so檔案），沒有這樣的下游貨物用戶，囙此您應該提交cargo.lock。
+toml靈活的版本說明符使您可以輕鬆地在項目中使用Rust庫，並最大限度地提高庫之間的相容性。 Cargo.lock的記帳支持機器之間一致、可複製的構建。 它們結合在一起，大大有助於你避免依賴地獄。
+
+
+
+
+
+
+
 ## Publishing Crates to crates.io
 
+You’ve decided to publish your fern-simulating library as open source software. Con‐ gratulations! This part is easy.
+
+First, make sure Cargo can pack the crate for you.
+
+```
+cargo package
+```
+
+cargo package命令創建一個檔案（在本例中為target/package/firn_sim-0.1.0.crace），其中包含庫的所有原始檔案，包括cargo.toml。 這是您將上傳到crates.io與全世界共亯的檔案。 （您可以使用cargo package-list來查看包含哪些檔案。）然後，cargo通過從.crace檔案構建庫來仔細檢查其工作，就像您的最終用戶一樣。
+Cargo警告說，Cargo.toml的[包]部分缺少一些對下游用戶很重要的資訊，例如您分發程式碼所依據的許可證。 警告中的URL是一個很好的資源，囙此我們不會在這裡詳細解釋所有欄位。 簡而言之，您可以通過在Cargo.toml中添加幾行來修復警告：
+
+```
+
+    [package]
+    name = "fern_sim"
+    version = "0.1.0"
+    authors = ["You <you@example.com>"]
+    license = "MIT"
+    homepage = "https://fernsim.example.com/"
+    repository = "https://gitlair.com/sporeador/fern_sim"
+    documentation = "http://fernsim.example.com/docs"
+    description = """
+    Fern simulation, from the cellular level up.
+    
+```
+
+Another problem that sometimes arises at this stage is that your *Cargo.toml* file might be specifying the location of other crates by path, as shown in “Specifying Dependen‐ cies” on page 185:
+
+```
+    image = { path = "vendor/image" }
+```
+
+
+
+For you and your team, this might work fine. But naturally, when other people down‐ load the fern_sim library, they will not have the same files and directories on their computer that you have. Cargo therefore *ignores* the path key in automatically down‐ loaded libraries, and this can cause build errors. The fix, however, is straightforward: if your library is going to be published on crates.io, its dependencies should be on crates.io too. Specify a version number instead of a path:
+
+`image = "0.6.1"`
+ If you prefer, you can specify both a path, which takes precedence for your own local
+
+builds, and a version for all other users:
+` image = { path = "vendor/image", version = "0.6.1" }`
+
+Of course, in that case it’s your responsibility to make sure that the two stay in sync.
+
+
+
+Lastly, before publishing a crate, you’ll need to log in to crates.io and get an API key. This step is straightforward: once you have an account on crates.io, your “Account Settings” page will show a cargo login command, like this one:
+
+`cargo login api_key`
+
+Cargo將金鑰保存在設定檔中，API金鑰應保密，如
+密碼。 囙此，只能在您控制的電腦上運行此命令。
+
+
+
+That done, the final step is to run cargo publish:
+
+`cargo publish`
+
+有了這個，你的圖書館就可以在crates.io上加入成千上萬的其他圖書館。
+
+
+
+## Workspaces
+
+隨著你的項目不斷發展，你最終會寫很多板條箱。 它們並排存在於一個源存儲庫中：
+
+```
+ fernsoft/
+    ├── .git/...
+    ├── fern_sim/
+    │   ├── Cargo.toml
+    │   ├── Cargo.lock
+		│ ├── src/...
+    │   └── target/...
+    ├── fern_img/
+    │   ├── Cargo.toml
+    │   ├── Cargo.lock
+		│ ├── src/...
+    │   └── target/...
+    └── fern_video/
+        ├── Cargo.toml
+        ├── Cargo.lock
+        ├── src/...
+        └── target/...
+```
+
+按照Cargo的工作方式，每個主機殼都有自己的構建目錄target，其中包含該主機殼所有依賴項的單獨構建。 這些構建目錄是完全獨立的。 即使兩個crate有一個共同的依賴項，它們也不能共亯任何已編譯的程式碼。 這是浪費。
+
+
+
+您可以使用Cargo工作區來節省編譯時間和磁碟空間，Cargo工作空間是一個由板條箱組成的集合，共亯一個通用的構建目錄和Cargo.lock檔案。
+您所需要做的就是在存儲庫的根目錄中創建一個Cargo.toml檔案，並在其中放入以下行：
+
+```
+   [workspace]
+    members = ["fern_sim", "fern_img", "fern_video"]
+```
+
+其中fern_sim等是包含板條箱的子目錄的名稱。 删除這些子目錄中剩餘的Cargo.lock檔案和目標目錄。
+
+完成此操作後，任何主機殼中的貨物構建都將自動在根目錄下創建並使用共亯構建目錄（在本例中為fernsoft/target）。 命令貨物構建——所有構建當前工作空間中的所有板條箱。 貨物測試和貨物單據也接受--all選項。
