@@ -186,19 +186,271 @@ A GrayscaleMap value is laid out in memory as diagrammed in Figure 9-1.
 
 > impl.rs
 
+一个Impl块只是FN定义的集合，每个定义都成为块顶部指定的结构类型上的方法。在这里，我们定义了一个公共结构队列，然后给出了两种公共方法，Push and Pop
 
+
+
+方法也称为关联功能，因为它们与Spe -Cific类型相关。关联功能的相反功能是一个自由功能，该功能未定义为Impl块的项目。
+
+
+
+
+
+在我们的示例中，推动和流行方法将队列字段称为self.olter and self.younger。与C ++和Java不同，其中“此”对象的成员在方法体中直接可见为不合格的标识符，Rust方法必须明确使用自我来指调用其所调用的值，类似于Python方法使用自我的方式，以及JavaScript方法使用此方法的方式。
+
+
+
+由于Push and Pop需要修改队列，因此它们都采用和Mut self。但是，当您调用方法时，您不需要自己借用可变的参考。普通的方法调用语法隐含地处理了这一点。因此，有了这些定义，您可以使用这样的队列
+
+
+
+> 还是那个文件
+
+简单地编写q.push（...）借用了对Q的可变引用，就好像您已经写了（＆mut q）.push（...），因为那是推动方法的自我所需要的。
+
+如果方法不需要修改其自我，则可以将其定义为进行共享参考。用于审查
+
+like this 
+
+```rust
+impl Queue{
+    pub fn is_empty(&self)->bool{
+        self.older.is_empty() &&self.younger,is_empty()
+    }
+}
+```
+
+Again, the method call expression knows which sort of reference to borrow:
+
+```rust
+assert!(q.is_empty());
+q.push('☉');
+assert!(!q.is_empty())
+```
+
+
+
+Or, if a method wants to take ownership of self, it can take self by value
+
+```rust
+impl Queue {
+    pub fn split(self) -> (Vec<char>, Vec<char>) {
+        (self.older, self.younger)
+    }
+}
+```
+
+
+
+但是请注意，由于拆分凭价值使自己的自我从Q中移出，因此将Q从Q中移出。由于Split的自我现在拥有队列，因此它能够将独立矢量从中移出，然后将它们退回到Caller
+
+
+
+You can also define methods that don’t take self as an argument at all. These become
+functions associated with the struct type itself, not with any specific value of the type.
+Following  the  tradition  established  by  C++  and  Java,  Rust  calls  these  static  methods.
+They’re often used to provide constructor functions, like t
+
+```rust
+impl Queue{pub fn new()->Queue{
+    Queue{older:Vec::new(),younger:Vec::new()}
+}
+}
+// 实例化
+fn main(){
+    let mut q = Queue::new();
+    q.push("*");
+}
+```
 
 ## Generic Structs
+
+我们对队列的早期定义不令人满意：它写成存储字符，但其结构或方法完全没有特定于字符。如果我们要定义另一个符合字符串值的结构，则可以识别代码，除非Char将被字符串替换。那会浪费时间
+
+
+
+
+
+幸运的是，rust结构可能是通用的，这意味着它们的定义是一个模板，您可以将其插入所喜欢的任何类型。例如，这是队列的定义，可以保留任何键入的值
+
+```rust
+pub struct Queue<T>{
+    older:Vec<T>,
+    younger:Vec<T>
+}
+```
+
+您可以在队列<t>中读取<t>为“对于任何元素t类型...”。因此，此定义示为“对于任何类型T，队列<t>是Vec <T>类型的两个字段。”例如，在队列<string>中，t是字符串，因此较旧的和更年轻的类型vec <string>。在队列<char>中，T是char，我们得到了一个与我们开始使用的特定特定定义相同的结构。实际上，VEC本身是一个通用结构，在此中定义
+
+
+
+在通用结构定义中，<Angle Brackets>中使用的类型名称称为类型参数。通用结构的IMPL块看起来像
+
+> generic_struct.rs
+
+您可以将行读取impl <t>队列<t>读为“对于任何类型T，以下是队列<t>上可用的方法。”然后，您可以将类型参数t用作方法definitio中的类型
+
+
+
+我们已经在上述代码中使用了Rust的速记作为自我参数；到处写出队列<t>成为一种口腔和分心。作为另一个速记，无论是否通用，每个Impl块都将特殊类型的参数self（请注意骆驼名）定义为我们正在添加的方法。在前面的202 |第9章：结构代码，自我是队列<t>，因此我们可以缩写队列:: new的定义有点
+
+
+
+For static method calls, you can supply the type parameter explicitly using the turbofish `::<> notation`
+
+> generic_struct.rs
+
+In  fact,  this  is  exactly  what  we’ve  been  doing  with  Vec,  another  generic  struct  type,
+throughout the book.
+It’s not just structs that can be generic. Enums can take type parameters as well, with a
+very similar syntax. We’ll show that in detail in “Enums” on page 212
+
+
 
 
 
 ## Structs with Lifetime Parameters
 
+如果结构类型包含参考，则必须命名这些参考文献的寿命。例如，这是一种可能会引用某些最伟大和最少要素的结构
+
+```rust
+struct Exterma<'elt>{
+    greatest: & 'elt i32,
+    least: &'elt i32
+}
+```
+
+此前，我们邀请您认为诸如结构队列<t>之类的声明是指在任何特定类型T的情况下，您可以制作一个符合该类型的队列<t>。具有生命周期参数的simi structs |203很大程度上，您可以将struct Extrema <'Elt>视为意味着，鉴于任何特定的终生'Elt，您可以制作一个具有该寿命的参考的极端<'Elt>
+
+
+
+这是扫描切片并返回极值的功能，其字段是指其元素
+
+```rust
+struct Exterma<'elt>{
+    greatest: & 'elt i32,
+    least: &'elt i32
+}
+
+fn find_extrema<'s>(slice : &'s[i32])-> Exterma<'s>{
+    let mut greatest = &slice[0];
+    let mut least = &slice[0];
+    
+    for i in 1..slice.len(){
+        if slice[i]<*least{least = &slice[i];}
+        if slice[i]>*greatest{greatest = &slice[i];}
+        
+    }
+    Exterma{greatest,least}
+}
+```
+
+在这里，由于find_extrema借用了具有寿命的slice元素，因此我们返回的极端结构也将其用作其参考文献的寿命。Rust总是会进一步呼叫的终身参数，因此find_extrema的呼叫不必提及
+
+```rust
+struct Exterma<'elt>{
+    greatest: & 'elt i32,
+    least: &'elt i32
+}
+
+fn find_extrema<'s>(slice : &'s[i32])-> Exterma<'s>{
+    let mut greatest = &slice[0];
+    let mut least = &slice[0];
+    
+    for i in 1..slice.len(){
+        if slice[i]<*least{least = &slice[i];}
+        if slice[i]>*greatest{greatest = &slice[i];}
+        
+    }
+    Exterma{greatest,least}
+}
+
+fn main(){
+    let a = [0, -3, 0, 15, 48];
+    let e = find_extrema(&a);
+    assert_eq!(*e.least, -3);
+    assert_eq!(*e.greatest, 48)
+}
+```
+
+
+
+由于返回类型使用与参数相同的寿命是如此普遍，因此Rust可以让我们省略一个明显的候选人的生命。我们也可以写出find_extrema这样的签名，没有任何含义的变化：
+
+```rust
+
+
+fn find_extrema（slice：＆[i32]） - > Extrema {...}，
+```
+
+我们可能意味着极端<'static>，但这很不寻常，但是。Rust为CON CAS提供了速记
+
+
+
 
 
 ## Deriving Common Traits for Struct Types
 
+结构类型很容写
+
+```rust
+struct Point{
+    x:f64,
+    y:f64
+}
+```
+
+但是，如果您开始使用此点类型，您会很快注意到这有点痛苦。如书面，点不可复制或可包裹。您无法用`println！（“ {：}”，Point）`;并且它不支持==和！=运算符。
+
+
+
+这些功能中的每一个都在Rust中名称 - 复制，克隆，调试和Partialeq。它们被称为特征。在第11章中，我们将展示如何手工实现自己的结构。但是，在这些标准特征和其他一些特征的情况下，除非您想要某种自定义行为，否则您无需手动实施它们。生锈可以以机械精度自动为您实施它们。只需将＃[derive]属性添加到Struc
+
+```rust
+#[derive(Copy,Clone,Debug,PartiaEq)]
+struct Point{
+    x:f64,
+    y:f64
+}
+```
+
+只要其每个字段都实现特征，就可以自动实现这些特征。我们可以要求Rust得出PartiaLeq的点
+
+
+
+RUST还可以得出部分端口，这将增加对比较操作的支持<，>，<=和> =。我们在这里还没有这样做，因为比较两个点以查看一个“比另一个小”是否实际上是一件很奇怪的事情。没有一个关于要点的常规秩序。因此，我们选择不支持这些操作员的点值。这样的情况是Rust使我们写下＃[derive]属性而不是自动衍生其可能的每个特征的原因之一。另一个原因是，提出特征是自动的公共功能，因此，可复制性，可克隆性等都是您结构公共API的一部分，因此应故意选择。我们将详细描述Rust的标准特征，并确定哪个特征是＃[得出]，在第13章中
+
 
 
 ## Interior Mutability
+
+可变性就像其他任何事物：过剩，会导致问题，但您通常只想一点。例如，假设您的蜘蛛机器人控制系统具有一个中央结构，其中包含设置和I/O句柄。它是在机器人靴子时设置的，而且价值永远不会改变
+
+> interior_mut.rs
+
+他为网络构造，捕食，毒液流控制等构建，每个人都有一个RC <spiderrobot>智能指针。回想一下RC代表参考计数，并且RC框中的价值总是共享的，因此总是不可变
+
+
+
+现在，假设您想使用标准文件类型向Spiderrobot结构添加一点记录。有一个问题：文件必须是mut。所有撰写的方法都需要使用mut参考
+
+
+
+这种情况经常出现。我们需要的是在原本不变的值（蜘蛛体结构）内的一些可变数据（文件）。这称为内部可变性。Rust提供了几种口味。在本节中，我们将讨论两种最直接的类型：Cell <T>和Refcell <T>，均在STD :: Cell模块中
+
+
+
+
+
+单元格是一个包含单个T型的私人值的结构。关于单元格的唯一特殊之处在于即使您无法访问单元格本身，也可以获取并设置字段
+
+- **Cell::new(value)** 创建Cell然后输入值
+- **cell.get()** 返回复制的cell中的数值
+- **cell.set(value) ** 将给定值存储在单元格中，删除先前存储的值
+
+这种方法将自我作为非穆特参考
+
+```rust
+fn set(&self,value:T) // not '&mut self'
+```
 
