@@ -453,4 +453,28 @@ RUST还可以得出部分端口，这将增加对比较操作的支持<，>，<=
 ```rust
 fn set(&self,value:T) // not '&mut self'
 ```
+A Cell would be handy if you were adding a simple counter to your SpiderRobot.
+You could write:
 
+
+
+这很简单，但并不能解决我们的日志记录问题。Cell不让你
+对共享值调用mut方法。.get（）方法返回中的值的副本
+因此，只有当T实现了Copy特性时，它才能工作。对于测井，我们需要一个
+文件可复制，而文件不可复制
+
+
+在这种情况下，正确的工具是RefCell。与Cell＜T＞一样，RefCell＜T＞是一种泛型类型
+包含一个T类型的值。与Cell不同，RefCell支持借用引用取决于其T值：
+
+- RefCell::new(value) -> creates a new RefCell, moving value into it.
+- ref_cell.borrow()   ->returns a Ref<T>, which is essentially just a shared reference to the value stored in ref_cell.
+- ref_cell.borrow_mut() ->returns a RefMut<T>, essentially a mutable reference to the value in ref_cell.
+
+这很像正常引用的工作方式。唯一的区别是，正常情况下，
+当您借用对变量的引用时，Rust会在编译时进行检查，以确保
+你在安全地使用参考资料。如果检查失败，则会出现编译器错误。RefCell
+使用运行时检查强制执行相同的规则。所以，如果你违反了规则，你会得到一个
+惊恐
+
+无论一个结构是否有命名字段或类似元组，它都是其他值的集合：如果我有一个SpiderSenses结构，那么我就有一个指向共享SpiderRobot结构的Rc指针，我有眼睛，我有加速度计，等等。所以结构的本质是单词“and”：我有X和Y。但如果有另一种类型围绕单词“or”构建呢？也就是说，当你有这样一个类型的值时，你会有X还是Y？事实证明，这些类型非常有用，在Rust中无处不在，它们是下一章的主题。
