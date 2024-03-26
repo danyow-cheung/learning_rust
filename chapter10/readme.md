@@ -51,3 +51,78 @@ fn compare(n:i32,m:i32){
 }
 ```
 导入构造函数后，我们可以编写Less而不是Ordering:：Less，等等，但因为这不太明确，所以通常认为不导入它们是更好的风格，除非它使代码更可读
+
+要导入当前模块中声明的枚举的构造函数，请使用自导入：
+
+```rust
+enum Pet{
+    Orca,
+    Giraffe,
+}
+use self::Pet::*;
+```
+在内存中，C样式枚举的值存储为整数。有时，告诉Rust要使用哪些整数是有用的：
+```rust
+enum HttpStatus{
+    Ok = 200,
+    NotModified =304,
+    NotFound = 404,
+    ...
+}
+```
+否则，Rust将为您分配数字，从0开始。默认情况下，Rust使用可以容纳C样式枚举的最小内置整数类型来存储它们。大多数适合单个字节。
+```rust
+use std::mem::size_of;
+assert_eq!(sizeof::<Ordering>(),1);
+assert_eq!(sizeof::<HttpStatus>(),2); // 404 doesn't fit in a u8
+```
+您可以通过向枚举添加#[repr]属性来覆盖Rust对内存中表示的选择。有关详细信息，请参阅第21章。
+允许将C样式枚举强制转换为整数：
+```rust
+assert_eq!(HttpStatus::Ok as i32 ,200);
+```
+但是，从整数到枚举的另一个方向的强制转换不是。与C和C++不同，Rust保证枚举值只是枚举声明中拼写的值之一。从整数类型到枚举类型的未经检查的强制转换可能会破坏这种保证，因此这是不允许的。您可以编写自己的已检查转换：
+```rust
+fn http_status_from_u32(n:u32)->Option<HttpStatus>{
+    match n {
+        200=>Some(HttpStatus::Ok),
+        304=>Some(HttpStatus::NotModified),
+        404=>Some(HttpStatus::NotFound),
+        ...
+        _=>None
+    }
+}
+```
+或者使用enum_primitive板条箱。它包含一个为您自动生成这种转换代码的宏。
+与structs一样，编译器将为您实现==运算符等功能，但您必须提出要求。
+```rust
+#[derive(Copy,Clone,Debug,PartiaEq)]
+enum TimeUnit{
+    Seconds,Minutes,Hours,Days,Months,Years
+}
+```
+枚举可以有方法，就像结构一样：
+```rust
+impl TimeUnit{
+    //return the plural noun for this time unit 
+    fn plural(self)->&'static str{
+        match self{
+            TimeUnit::Seconds=>"seconds",
+            TimeUnit::Minutes=>"minutes",
+            TimeUnit::Hours=>"hours",
+            TimeUnit::Days => "days", 
+            TimeUnit::Months => "months", 
+            TimeUnit::Years => "years"
+        }
+    }
+    fn singular(self)->&'static str{
+        self.plural().trim_right_matches("s")
+    }
+}
+```
+So much for C-style enums. The more interesting sort of Rust enum is the kind that contains data.
+
+## Enums with Data 
+
+
+
